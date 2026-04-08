@@ -1,26 +1,19 @@
-FROM php:8.2-cli
+FROM php:8.2-apache
 
 # Installer extensions nécessaires
-RUN apt-get update && apt-get install -y \
-    unzip \
-    git \
-    curl \
-    libzip-dev \
-    zip \
-    && docker-php-ext-install zip
+RUN docker-php-ext-install pdo pdo_mysql
 
-# Installer Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Activer mod_rewrite (important pour Laravel)
+RUN a2enmod rewrite
 
-# Copier projet
-WORKDIR /app
-COPY . .
+# Copier le projet
+COPY . /var/www/html
 
-# Installer Laravel
-RUN composer install
+# Définir le bon dossier public Laravel
+WORKDIR /var/www/html
 
-# Exposer port
-EXPOSE 10000
+# 👉 TRÈS IMPORTANT : pointer Apache vers /public
+RUN sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf
 
-# Lancer Laravel
-CMD php artisan serve --host=0.0.0.0 --port=10000
+# Donner les permissions
+RUN chown -R www-data:www-data /var/www/html
